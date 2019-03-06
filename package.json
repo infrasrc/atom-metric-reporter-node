@@ -6,8 +6,9 @@
   "author": "g8y3e",
   "license": "MIT",
   "dependencies": {
-    "request": "^2.88.0",
-    "bluebird": "^3.5.3"
+    "request": "2.88.0",
+    "bluebird": "3.5.3",
+    "moment": "2.23.0"
   },
   "devDependencies": {
     "chai": "^3.5.0",

@@ -4,22 +4,26 @@ const log = require('./log'),
       drivers = require('./drivers/drivers'),
       Drivers = new drivers(),
       crypto = require('crypto'),
+      moment = require('moment'),
       Promise = require('bluebird');
 
 class MetricReporter {
-    constructor(driverName, interval, maxMetrics, prefix, isStub) {
+    constructor(driverName, driverOptions, interval, maxMetrics, prefix, isStub) {
+        // init driver
+        driverName = driverName || "";
         this._driver = Drivers.getDriver(driverName);
-        if (this._driver != null) {
+        if (this._driver == null) {
             let errMsg = 'Metric Reporter: error driver: ' + driverName + ' not found!';
             log.error(errMsg);
             throw new Error(errMsg);
         }
+        this._driver.init(driverOptions);
 
         // check types
-        this._interval = interval;
-        this._maxMetrics = maxMetrics;
-        this._prefix = prefix;
-        this._isStub = isStub;
+        this._interval = interval || 1;
+        this._maxMetrics = maxMetrics || 100;
+        this._prefix = prefix || "";
+        this._isStub = isStub || false;
 
         this._metrics = {};
 
@@ -29,14 +33,15 @@ class MetricReporter {
     send(name, value, tags) {
         let self = this;
         return new Promise(function (resolve, reject) {
-
+            self._safeMetric(name, value, tags);
+            resolve(true);
         });
     }
 
     stop() {
         let self = this;
         return new Promise(function (resolve, reject) {
-            self._flushAll(false, metric).then(function (res) {
+            self._flushAll(metric).then(function (res) {
                 resolve(res);
             }, function (reason) {
                 reject(reason);
@@ -57,14 +62,15 @@ class MetricReporter {
                 name: name,
                 points: [],
                 tags: tags,
-                startTime: moment().now()
+                startTime: moment()
             };
 
+            metric.points.push([moment().unix(), value]);
             self._metrics[hashKey] = metric;
 
             setInterval(function () {
-                self._flush(true, metric);
-            }, 1 * 60 * 1000); // 1 sec interval
+                self._flush(metric);
+            }, self._interval * 1000);
         }
     }
 
@@ -90,15 +96,15 @@ class MetricReporter {
     _flush(metric) {
         let self = this;
         let metricClear = function() {
-            metric.startTime = moment().now();
+            metric.startTime = moment();
             metric.points = [];
         };
 
         return new Promise(function (resolve, reject) {
-            let currentTime = moment().now();
+            let currentTime = moment();
 
-            let isNeedSend = (self._flushMetrics || (metric.points.length >= self._maxMetrics ||
-                (currentTime.diff(metric.startTime).duration() >= self._interval)));
+            let isNeedSend = (self._flushMetrics || (metric.points.length != 0 &&
+                (metric.points.length >= self._maxMetrics)));
 
             if (isNeedSend) {
                 self._driver.send(metric.name, metric.points, metric.tags).then(function (res) {

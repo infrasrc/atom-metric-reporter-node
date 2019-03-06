@@ -7,8 +7,8 @@ const log = require('../log'),
 class Drivers {
     constructor() {
         this._instances = {
-            'datadog': new appOptics(),
-            'appoptics': new datadog(),
+            'datadog': new datadog(),
+            'appoptics': new appOptics(),
         };
     }
 

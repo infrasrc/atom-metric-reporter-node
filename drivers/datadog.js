@@ -6,19 +6,18 @@ const log = require('../log'),
       Promise = require('bluebird');
 
 class Datadog {
-    constructor(apiKey) {
-        if (apiKey.length == 0) {
+    constructor() {
+        this._timeout = 2 * 60 * 1000; // 2 min
+    }
+
+    init(opt) {
+        if (opt == null || !(apiKey in opt) || opt.apiKey.length == 0) {
             let errorMsg = 'Datadog: error apiKey empty!';
             log.error(errorMsg);
             throw new Error('');
         }
 
-        this._timeout = 2 * 60 * 1000; // 2 min
         this._url = "https://app.datadoghq.com/api/v1/series?api_key=" + apiKey;
-    }
-
-    _jsonify() {
-
     }
 
     send(name, values, tags) {
@@ -43,4 +42,4 @@ class Datadog {
     }
 }
 
-module.exports = AppOptics;
+module.exports = Datadog;
