@@ -8,7 +8,7 @@ const log = require('./log'),
       Promise = require('bluebird');
 
 class MetricReporter {
-    constructor(driverName, driverOptions, interval, maxMetrics, prefix, isStub) {
+    constructor(driverName, driverOptions, interval, maxMetrics, prefix, isStub, logger) {
         // init driver
         driverName = driverName || "";
         this._driver = Drivers.getDriver(driverName);
@@ -19,6 +19,9 @@ class MetricReporter {
         }
         this._driver.init(driverOptions);
 
+        // init logger
+        log.init(logger || console);
+
         // check types
         this._interval = interval || 1;
         this._maxMetrics = maxMetrics || 100;
@@ -27,7 +30,7 @@ class MetricReporter {
 
         this._metrics = {};
 
-        this._flushMetrics = false;
+        this._isRunning = true;
     }
 
     send(name, value, tags) {
@@ -40,8 +43,14 @@ class MetricReporter {
 
     stop() {
         let self = this;
+        if (!self._isRunning) {
+            return;
+        }
+
         return new Promise(function (resolve, reject) {
-            self._flushAll(metric).then(function (res) {
+            log.info("Metric reporter: flush from stop");
+            self._isRunning = false;
+            self._flushAll().then(function (res) {
                 resolve(res);
             }, function (reason) {
                 reject(reason);
@@ -57,20 +66,22 @@ class MetricReporter {
             let metric = self._metrics[hashKey];
 
             metric.points.push([moment().unix(), value]);
+            self._flush(false, metric);
         } else {
             let metric = {
                 name: name,
                 points: [],
                 tags: tags,
-                startTime: moment()
+                startTime: moment(),
             };
 
             metric.points.push([moment().unix(), value]);
-            self._metrics[hashKey] = metric;
-
-            setInterval(function () {
-                self._flush(metric);
+            metric.interval = setInterval(function () {
+                log.info("Metric reporter: flush metric from interval");
+                self._flush(true, metric);
             }, self._interval * 1000);
+
+            self._metrics[hashKey] = metric;
         }
     }
 
@@ -93,7 +104,7 @@ class MetricReporter {
         return crypto.createHash('md5').update(hashData).digest('hex')
     }
 
-    _flush(metric) {
+    _flush(isForce, metric) {
         let self = this;
         let metricClear = function() {
             metric.startTime = moment();
@@ -103,17 +114,17 @@ class MetricReporter {
         return new Promise(function (resolve, reject) {
             let currentTime = moment();
 
-            let isNeedSend = (self._flushMetrics || (metric.points.length != 0 &&
-                (metric.points.length >= self._maxMetrics)));
+            let isNeedSend = metric.points.length != 0 && (isForce ||
+                (metric.points.length >= self._maxMetrics));
 
             if (isNeedSend) {
+                log.info("Metric reporter: sending metrics data");
                 self._driver.send(metric.name, metric.points, metric.tags).then(function (res) {
-                    metricClear();
                     resolve(res);
                 }, function (reason) {
-                    metricClear();
                     reject(reason);
                 });
+                metricClear();
             }
         })
     }
@@ -122,33 +133,24 @@ class MetricReporter {
         let self = this;
         return new Promise(function (resolve, reject) {
             let metricCount = Object.keys(self._metrics).length;
-            self._flushMetrics = true;
+            var currentCount = 0;
 
-            var intervalCount = 0;
-            var maxIntervalCount = 1000;
-
-            var flushInterval = setInterval(function() {
-                var currentCount = 0;
-                intervalCount += 1;
-
-                if (intervalCount >= maxIntervalCount) {
-                    let errorStr = 'Metric Reporter: error flush all data!';
-                    log.error(errorStr);
-                    reject(errorStr);
+            for (var key in self._metrics) {
+                let metric = self._metrics[key];
+                if (metric.interval != null) {
+                    clearInterval(metric.interval);
                 }
 
-                for (var key in self._metrics) {
-                    let metric = self._metrics[key];
-
-                    if (metric.points.length == 0) {
-                        currentCount += 1;
-                    }
-
-                    if (currentCount >= metricCount) {
-                        resolve('Flushed metrics');
-                    }
+                if (metric.points.length == 0) {
+                    currentCount += 1;
                 }
-            }, 30 * 1000);
+
+                self._flush(true, metric);
+
+                if (currentCount >= metricCount) {
+                    resolve('Flushed metrics');
+                }
+            }
         });
     }
 }
