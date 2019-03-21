@@ -36,6 +36,10 @@ class MetricReporter {
     send(name, value, tags) {
         let self = this;
         return new Promise(function (resolve, reject) {
+            if (self._prefix.length > 0) {
+                name = self._prefix + '.' + name;
+            }
+
             self._safeMetric(name, value, tags);
             resolve(true);
         });
@@ -86,7 +90,7 @@ class MetricReporter {
     }
 
     _calcHash(name, tags) {
-        let hashData = this._prefix + '.' + name;
+        let hashData = name;
 
         let hashList = [];
         for (var key in tags) {
