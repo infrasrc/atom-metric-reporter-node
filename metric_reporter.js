@@ -1,11 +1,11 @@
 'use strict';
 
 const log = require('./log'),
-      drivers = require('./drivers/drivers'),
-      Drivers = new drivers(),
-      crypto = require('crypto'),
-      moment = require('moment'),
-      Promise = require('bluebird');
+    drivers = require('./drivers/drivers'),
+    Drivers = new drivers(),
+    crypto = require('crypto'),
+    moment = require('moment'),
+    Promise = require('bluebird');
 
 class MetricReporter {
     constructor(driverName, driverOptions, interval, maxMetrics, prefix, isStub, logger) {
@@ -126,6 +126,7 @@ class MetricReporter {
                 self._driver.send(metric.name, metric.points, metric.tags).then(function (res) {
                     resolve(res);
                 }, function (reason) {
+                    log.error("Metric reporter: " + reason);
                     reject(reason);
                 });
                 metricClear();
