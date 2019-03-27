@@ -1,8 +1,8 @@
 'use strict';
 
 const request = require('request'),
-      log = require('../log'),
-      Promise = require('bluebird');
+    log = require('../log'),
+    Promise = require('bluebird');
 
 class AppOptics {
     constructor() {
@@ -63,13 +63,18 @@ class AppOptics {
             }
         }
 
+        let newTags = {};
         for (var key in tags) {
             let tag = tags[key];
-            tags[key] = tag.replace(" ", "_");
+            if (tag.length > 0) {
+                newTags[key] = tag.replace(" ", "_");
+            } else {
+                log.error("Metric reporter: tag key: " + key + " - is empty!")
+            }
         }
 
         let sendData = {
-            tags: tags,
+            tags: newTags,
             measurements: this._collectValues(name, values)
         };
 
@@ -84,11 +89,12 @@ class AppOptics {
                     "Content-Type": "application/json"
                 }
             }, function (err, res, body) {
-                if (err != null || (res != null && res.statusCode != 202)) {
-                    log.error(err);
-                    reject(err)
+                if (err != null) {
+                    reject(err);
+                } else if (res != null && res.statusCode != 202) {
+                    reject(body.errors ? JSON.stringify(body.errors) : res.statusCode);
                 } else {
-                    resolve(body)
+                    resolve(body);
                 }
             });
         });

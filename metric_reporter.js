@@ -1,14 +1,14 @@
 'use strict';
 
 const log = require('./log'),
-      drivers = require('./drivers/drivers'),
-      Drivers = new drivers(),
-      crypto = require('crypto'),
-      moment = require('moment'),
-      Promise = require('bluebird');
+    drivers = require('./drivers/drivers'),
+    Drivers = new drivers(),
+    crypto = require('crypto'),
+    moment = require('moment'),
+    Promise = require('bluebird');
 
 class MetricReporter {
-    constructor(driverName, driverOptions, interval, maxMetrics, prefix, isStub, logger) {
+    constructor(driverName, driverOptions, interval, maxMetrics, prefix, logger) {
         // init driver
         driverName = driverName || "";
         this._driver = Drivers.getDriver(driverName);
@@ -26,7 +26,6 @@ class MetricReporter {
         this._interval = interval || 1;
         this._maxMetrics = maxMetrics || 100;
         this._prefix = prefix || "";
-        this._isStub = isStub || false;
 
         this._metrics = {};
 
@@ -126,6 +125,7 @@ class MetricReporter {
                 self._driver.send(metric.name, metric.points, metric.tags).then(function (res) {
                     resolve(res);
                 }, function (reason) {
+                    log.error("Metric reporter: " + reason);
                     reject(reason);
                 });
                 metricClear();
