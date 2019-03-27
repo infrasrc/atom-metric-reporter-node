@@ -8,7 +8,7 @@ const log = require('./log'),
     Promise = require('bluebird');
 
 class MetricReporter {
-    constructor(driverName, driverOptions, interval, maxMetrics, prefix, isStub, logger) {
+    constructor(driverName, driverOptions, interval, maxMetrics, prefix, logger) {
         // init driver
         driverName = driverName || "";
         this._driver = Drivers.getDriver(driverName);
@@ -26,7 +26,6 @@ class MetricReporter {
         this._interval = interval || 1;
         this._maxMetrics = maxMetrics || 100;
         this._prefix = prefix || "";
-        this._isStub = isStub || false;
 
         this._metrics = {};
 

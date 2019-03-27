@@ -22,8 +22,7 @@ function test_metrics() {
     console.info("start test");
     for (var i = 0; i < 200; i++) {
         reporter.send("g8y3e_test_metric", Math.floor(Math.random() * Math.floor(10)), {
-            test: "",
-            account_name: "test"
+            test: ""
         });
     }
 
