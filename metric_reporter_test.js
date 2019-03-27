@@ -17,12 +17,12 @@ class log2 {
 function test_metrics() {
     let reporter = new MetricReporter("appoptics",
         {token: "test_token"},
-        2, 140, "", false, new log2());
+        2, 140, "", new log2());
 
     console.info("start test");
     for (var i = 0; i < 200; i++) {
         reporter.send("g8y3e_test_metric", Math.floor(Math.random() * Math.floor(10)), {
-            test: ""
+            "test": "test"
         });
     }
 
