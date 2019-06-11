@@ -80,7 +80,6 @@ class MetricReporter {
 
             metric.points.push([moment().unix(), value]);
             metric.interval = setInterval(function () {
-                log.info("Metric reporter: flush metric from interval");
                 self._flush(true, metric);
             }, self._interval * 1000);
 
