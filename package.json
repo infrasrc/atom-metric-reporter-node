@@ -1,6 +1,6 @@
 {
   "name": "metric-reporter-node",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Atom Metric Reporter",
   "main": "metric_reporter.js",
   "author": "g8y3e",
