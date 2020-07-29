@@ -30,6 +30,11 @@ class MetricReporter {
         this._metrics = {};
 
         this._isRunning = true;
+
+        let self = this;
+        this._flush_interval = setInterval(function () {
+            self._flushAll()
+        }, this._interval * 1000);
     }
 
     send(name, value, tags) {
@@ -53,6 +58,7 @@ class MetricReporter {
         return new Promise(function (resolve, reject) {
             log.info("Metric reporter: flush from stop");
             self._isRunning = false;
+            clearInterval(self._flush_interval);
             self._flushAll().then(function (res) {
                 resolve(res);
             }, function (reason) {
@@ -79,9 +85,6 @@ class MetricReporter {
             };
 
             metric.points.push([moment().unix(), value]);
-            metric.interval = setInterval(function () {
-                self._flush(true, metric);
-            }, self._interval * 1000);
 
             self._metrics[hashKey] = metric;
         }
@@ -114,13 +117,10 @@ class MetricReporter {
         };
 
         return new Promise(function (resolve, reject) {
-            let currentTime = moment();
-
             let isNeedSend = metric.points.length != 0 && (isForce ||
                 (metric.points.length >= self._maxMetrics));
 
             if (isNeedSend) {
-                log.info("Metric reporter: sending metrics data");
                 self._driver.send(metric.name, metric.points, metric.tags).then(function (res) {
                     resolve(res);
                 }, function (reason) {
@@ -135,25 +135,15 @@ class MetricReporter {
     _flushAll() {
         let self = this;
         return new Promise(function (resolve, reject) {
-            let metricCount = Object.keys(self._metrics).length;
-            var currentCount = 0;
-
             for (var key in self._metrics) {
                 let metric = self._metrics[key];
-                if (metric.interval != null) {
-                    clearInterval(metric.interval);
-                }
-
-                if (metric.points.length == 0) {
-                    currentCount += 1;
-                }
-
                 self._flush(true, metric);
-
-                if (currentCount >= metricCount) {
-                    resolve('Flushed metrics');
-                }
             }
+
+            // clear all metrics
+            self._metrics = {};
+
+            resolve('Flushed metrics');
         });
     }
 }
