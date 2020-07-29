@@ -30,6 +30,12 @@ class MetricReporter {
         this._metrics = {};
 
         this._isRunning = true;
+
+        let self = this;
+        this._flush_interval = setInterval(function () {
+            log.info("Metric reporter: flush metrics from interval");
+            self._flushAll()
+        }, this._interval * 1000);
     }
 
     send(name, value, tags) {
@@ -53,6 +59,7 @@ class MetricReporter {
         return new Promise(function (resolve, reject) {
             log.info("Metric reporter: flush from stop");
             self._isRunning = false;
+            clearInterval(self._flush_interval);
             self._flushAll().then(function (res) {
                 resolve(res);
             }, function (reason) {
@@ -79,10 +86,6 @@ class MetricReporter {
             };
 
             metric.points.push([moment().unix(), value]);
-            metric.interval = setInterval(function () {
-                log.info("Metric reporter: flush metric from interval");
-                self._flush(true, metric);
-            }, self._interval * 1000);
 
             self._metrics[hashKey] = metric;
         }
@@ -141,9 +144,6 @@ class MetricReporter {
 
             for (var key in self._metrics) {
                 let metric = self._metrics[key];
-                if (metric.interval != null) {
-                    clearInterval(metric.interval);
-                }
 
                 if (metric.points.length == 0) {
                     currentCount += 1;
